@@ -25,19 +25,18 @@ connectDB();
 const app = express();
 
 // Middleware
-const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production' ? true : ['http://localhost:3000', 'http://localhost:5173'],
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
+app.use(cors({
+  // Allow production (Render) and local development
+  origin: process.env.NODE_ENV === 'production' ? true : ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Create HTTP Server
 const server = http.createServer(app);
 
 // Initialize Socket.IO using our dedicated config file
+// (This is the ONLY place 'io' should be declared)
 const io = initializeSocket(server);
 
 // Basic Test Route
@@ -53,11 +52,7 @@ app.use('/api/messages', messageRoutes);
 // ==========================================
 // ERROR HANDLING (MUST BE AFTER ALL ROUTES)
 // ==========================================
-
-// 1. Catch 404 errors (requests to routes that don't exist)
 app.use(notFound);
-
-// 2. Global error handler (catches all other errors)
 app.use(errorHandler);
 
 // Start Server
