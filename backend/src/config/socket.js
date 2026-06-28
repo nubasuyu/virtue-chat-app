@@ -5,12 +5,18 @@ const ChatRoom = require('../models/ChatRoom');
 const initializeSocket = (server) => {
   // Initialize Socket.IO with CORS settings
   const io = new Server(server, {
-    cors: {
-      origin: ['http://localhost:3000', 'http://localhost:5173'], 
-      methods: ['GET', 'POST'],
-      credentials: true
-    }
-  });
+  cors: {
+    origin: process.env.NODE_ENV === 'production'
+      ? [
+          'https://virtue-chat-app-a6fa.vercel.app',
+          'https://virtue-chat-app-a6fa-hjlqcx1ln-nubasuyu1.vercel.app',
+          /\.vercel\.app$/
+        ]
+      : ['http://localhost:3000', 'http://localhost:5173'],
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 
   io.on('connection', (socket) => {
     console.log(`⚡ User connected: ${socket.id}`);
