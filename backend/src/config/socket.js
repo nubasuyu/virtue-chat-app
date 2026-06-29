@@ -5,56 +5,36 @@ const ChatRoom = require('../models/ChatRoom');
 const initializeSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        // Define allowed origins
-        const allowedOrigins = [
-          'http://localhost:3000',
-          'http://localhost:5173',
-          'https://virtue-chat-app-a6fa.vercel.app',
-        ];
-        
-        // Check if origin matches allowed list or is a Vercel preview URL
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.match(/\.vercel\.app$/)) {
-          callback(null, true);
-        } else {
-          console.log('Blocked by CORS:', origin);
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
+      origin: true, // Allow all origins for now
       methods: ['GET', 'POST'],
       credentials: true
     },
+    // Critical for Render
     pingTimeout: 60000,
     pingInterval: 25000,
-    transports: ['websocket', 'polling']
+    transports: ['websocket', 'polling'],
+    allowUpgrades: true,
+    perMessageDeflate: {
+      threshold: 1024
+    }
   });
-
-  // ... rest of the code stays the same
 
   io.on('connection', (socket) => {
     console.log(`⚡ User connected: ${socket.id}`);
 
-    // 1. JOIN ROOM
     socket.on('join_room', (roomId) => {
       socket.join(roomId);
       console.log(`User ${socket.id} joined room: ${roomId}`);
     });
 
-    // 2. LEAVE ROOM
     socket.on('leave_room', (roomId) => {
       socket.leave(roomId);
-      console.log(`User ${socket.id} left room: ${roomId}`);
     });
 
-    // 3. SEND & SAVE MESSAGE
     socket.on('send_message', async (data) => {
       try {
-        // Expected data: { content, sender: { _id, username, avatar }, roomId }
+        console.log('📩 Received message:', data);
         
-        // Save message to database
         const newMessage = await Message.create({
           content: data.content,
           sender: data.sender._id,
@@ -62,24 +42,19 @@ const initializeSocket = (server) => {
           type: 'text'
         });
 
-        // Populate sender details so the frontend gets the username and avatar
         const populatedMessage = await Message.findById(newMessage._id)
           .populate('sender', 'username avatar');
 
-        // Update the ChatRoom's lastMessage reference
         await ChatRoom.findByIdAndUpdate(data.roomId, { lastMessage: newMessage._id });
 
-        // Broadcast the message to EVERYONE in that specific room
         io.to(data.roomId).emit('receive_message', populatedMessage);
-        
+        console.log('✅ Message sent successfully');
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('❌ Error sending message:', error);
       }
     });
 
-    // 4. TYPING INDICATORS
     socket.on('typing_start', (data) => {
-      // socket.to() sends to everyone in the room EXCEPT the sender
       socket.to(data.roomId).emit('user_typing', { username: data.username });
     });
 
@@ -87,7 +62,6 @@ const initializeSocket = (server) => {
       socket.to(data.roomId).emit('user_stop_typing', { username: data.username });
     });
 
-    // 5. DISCONNECT
     socket.on('disconnect', () => {
       console.log(`🔌 User disconnected: ${socket.id}`);
     });

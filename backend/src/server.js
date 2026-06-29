@@ -26,31 +26,15 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://virtue-chat-app-a6fa.vercel.app',
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.match(/\.vercel\.app$/)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allow all origins
   credentials: true
 }));
-
 app.use(express.json());
 
 // Create HTTP Server
 const server = http.createServer(app);
 
-// Initialize Socket.IO using our dedicated config file
-// (This is the ONLY place 'io' should be declared)
+// Initialize Socket.IO
 const io = initializeSocket(server);
 
 // Basic Test Route
@@ -63,9 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);
 
-// ==========================================
-// ERROR HANDLING (MUST BE AFTER ALL ROUTES)
-// ==========================================
+// Error Handling
 app.use(notFound);
 app.use(errorHandler);
 
