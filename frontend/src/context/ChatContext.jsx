@@ -11,24 +11,27 @@ export const ChatProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [isFetching, setIsFetching] = useState(false); // Prevent duplicate fetches
   const { user } = useAuth();
 
-  // Fetch rooms when component mounts or user changes
+  // Fetch rooms only once when user logs in
   useEffect(() => {
-    if (user) {
+    if (user && rooms.length === 0) {
       fetchRooms();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Listen for incoming messages
+  // Listen for messages
   useEffect(() => {
     const handleReceiveMessage = (message) => {
       if (selectedRoom && message.room === selectedRoom._id) {
         setMessages((prev) => [...prev, message]);
       }
-      // Update rooms list to show last message
-      fetchRooms();
+      // Only refresh rooms if not already fetching
+      if (!isFetching) {
+        fetchRooms();
+      }
     };
 
     socket.on('receive_message', handleReceiveMessage);
@@ -36,71 +39,55 @@ export const ChatProvider = ({ children }) => {
     return () => {
       socket.off('receive_message', handleReceiveMessage);
     };
-  }, [selectedRoom]);
+  }, [selectedRoom, isFetching]);
 
-  // Fetch all rooms - prevent duplicates
+  // Fetch rooms with duplicate prevention
   const fetchRooms = async () => {
+    if (isFetching) return; // Prevent duplicate calls
+    
+    setIsFetching(true);
     try {
       console.log('📡 Fetching rooms...');
       const res = await api.get('/rooms');
-      console.log('✅ Rooms fetched:', res.data.length, 'rooms');
+      console.log('✅ Fetched', res.data.length, 'rooms');
       
-      // Use a Set to eliminate duplicates by room ID
+      // Eliminate duplicates by ID
       const uniqueRoomsMap = new Map();
       res.data.forEach(room => {
         uniqueRoomsMap.set(room._id, room);
       });
       
-      const uniqueRooms = Array.from(uniqueRoomsMap.values());
-      setRooms(uniqueRooms);
+      setRooms(Array.from(uniqueRoomsMap.values()));
     } catch (error) {
       console.error('❌ Error fetching rooms:', error);
+    } finally {
+      setIsFetching(false);
     }
   };
 
-  // Select a room
+  // Select room
   const selectRoom = async (room) => {
     console.log('📂 Selecting room:', room.name);
     
-    // Leave previous room
     if (selectedRoom) {
       socket.emit('leave_room', selectedRoom._id);
     }
 
     setSelectedRoom(room);
     setMessages([]);
-
-    // Join the new room
     socket.emit('join_room', room._id);
-    console.log('🔌 Joined Socket.IO room:', room._id);
 
-    // Fetch message history
     try {
-      console.log('📥 Fetching messages for:', room.name);
       const res = await api.get(`/messages/${room._id}`);
-      console.log('✅ Fetched', res.data.length, 'messages');
       setMessages(res.data);
     } catch (error) {
       console.error('❌ Error fetching messages:', error);
     }
   };
 
-  // Send a message
+  // Send message
   const sendMessage = (content) => {
-    if (!content.trim()) {
-      console.log('⚠️ Empty message');
-      return;
-    }
-    
-    if (!selectedRoom) {
-      console.log('⚠️ No room selected');
-      return;
-    }
-
-    if (!user) {
-      console.log('⚠️ No user logged in');
-      return;
-    }
+    if (!content.trim() || !selectedRoom || !user) return;
 
     const messageData = {
       content,
@@ -112,20 +99,15 @@ export const ChatProvider = ({ children }) => {
       },
     };
 
-    console.log('📤 Sending message:', messageData);
+    console.log('📤 Sending:', messageData);
     socket.emit('send_message', messageData);
   };
 
-  // Create a new room
+  // Create room
   const createRoom = async (name) => {
     try {
-      console.log('🏗️ Creating room:', name);
       const res = await api.post('/rooms', { name, type: 'public' });
-      console.log('✅ Room created:', res.data);
-      
-      // Fetch rooms again to get fresh data (prevents duplicates)
       await fetchRooms();
-      
       return res.data;
     } catch (error) {
       console.error('❌ Error creating room:', error);
@@ -134,16 +116,7 @@ export const ChatProvider = ({ children }) => {
   };
 
   return (
-    <ChatContext.Provider
-      value={{
-        rooms,
-        selectedRoom,
-        messages,
-        selectRoom,
-        sendMessage,
-        createRoom,
-      }}
-    >
+    <ChatContext.Provider value={{ rooms, selectedRoom, messages, selectRoom, sendMessage, createRoom }}>
       {children}
     </ChatContext.Provider>
   );
