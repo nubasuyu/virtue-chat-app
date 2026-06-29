@@ -1,35 +1,76 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import RoomItem from './RoomItem';
-import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 
 const RoomList = ({ rooms, selectedRoom, onSelectRoom, onCreateRoom }) => {
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateInput, setShowCreateInput] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (newRoomName.trim()) {
-      onCreateRoom(newRoomName);
-      setNewRoomName('');
-      setShowCreateModal(false);
+      try {
+        await onCreateRoom(newRoomName);
+        setNewRoomName('');
+        setShowCreateInput(false);
+      } catch (error) {
+        console.error('Error creating room:', error);
+      }
     }
   };
 
+  const handleCancel = () => {
+    setNewRoomName('');
+    setShowCreateInput(false);
+  };
+
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-xl font-bold text-gray-800">Rooms</h2>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => setShowCreateInput(true)}
           className="p-2 hover:bg-gray-100 rounded-full text-purple-600 transition-colors"
           title="Create Room"
         >
           <Plus size={20} />
         </button>
       </div>
+
+      {/* Create Room Input */}
+      {showCreateInput && (
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="space-y-3">
+            <Input
+              label="Room Name"
+              placeholder="e.g., General Discussion"
+              value={newRoomName}
+              onChange={(e) => setNewRoomName(e.target.value)}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCancel}
+              >
+                <X size={16} className="mr-1" />
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleCreate}
+                disabled={!newRoomName.trim()}
+              >
+                Create Room
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Room List */}
       <div className="flex-1 overflow-y-auto py-2">
@@ -49,39 +90,7 @@ const RoomList = ({ rooms, selectedRoom, onSelectRoom, onCreateRoom }) => {
           ))
         )}
       </div>
-
-      {/* Create Room Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Create New Room"
-      >
-        <div className="space-y-4">
-          <Input
-            label="Room Name"
-            placeholder="e.g., General Discussion"
-            value={newRoomName}
-            onChange={(e) => setNewRoomName(e.target.value)}
-            autoFocus
-          />
-          <div className="flex justify-end gap-3 mt-6">
-            <Button
-              variant="secondary"
-              onClick={() => setShowCreateModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleCreate}
-              disabled={!newRoomName.trim()}
-            >
-              Create Room
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </>
+    </div>
   );
 };
 
