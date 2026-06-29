@@ -11,67 +11,77 @@ export const ChatProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [messages, setMessages] = useState([]);
-  const { user } = useAuth(); // Get current user to send messages
+  const { user } = useAuth();
 
-  // 1. Fetch rooms when the component mounts
+  // Fetch rooms when component mounts
   useEffect(() => {
-    fetchRooms();
-  }, []);
+    if (user) {
+      fetchRooms();
+    }
+  }, [user]);
 
-  // 2. Listen for incoming real-time messages
+  // Listen for incoming messages
   useEffect(() => {
     const handleReceiveMessage = (message) => {
-      // If the message is for the room we are currently looking at, add it to the list
       if (selectedRoom && message.room === selectedRoom._id) {
         setMessages((prev) => [...prev, message]);
       }
-      // Refresh the room list to update the "last message" preview in the sidebar
+      // Always refresh rooms to update last message
       fetchRooms();
     };
 
     socket.on('receive_message', handleReceiveMessage);
 
-    // Cleanup listener on unmount
     return () => {
       socket.off('receive_message', handleReceiveMessage);
     };
   }, [selectedRoom]);
 
-  // Fetch all rooms for the sidebar
+  // Fetch all rooms
   const fetchRooms = async () => {
     try {
+      console.log('📡 Fetching rooms...');
       const res = await api.get('/rooms');
+      console.log('✅ Rooms fetched:', res.data);
       setRooms(res.data);
     } catch (error) {
-      console.error('Error fetching rooms:', error);
+      console.error('❌ Error fetching rooms:', error);
     }
   };
 
-  // Select a room: Join socket room & fetch history
+  // Select a room
   const selectRoom = async (room) => {
-    // Leave previous room if exists
+    console.log('📂 Selecting room:', room);
+    
+    // Leave previous room
     if (selectedRoom) {
       socket.emit('leave_room', selectedRoom._id);
     }
 
     setSelectedRoom(room);
-    setMessages([]); // Clear old messages while loading new ones
+    setMessages([]);
 
-    // Join the new socket room
+    // Join the new room
     socket.emit('join_room', room._id);
+    console.log('🔌 Joined room:', room._id);
 
-    // Fetch message history from REST API
+    // Fetch message history
     try {
+      console.log('📥 Fetching messages for room:', room._id);
       const res = await api.get(`/messages/${room._id}`);
+      console.log('✅ Messages fetched:', res.data.length);
       setMessages(res.data);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error('❌ Error fetching messages:', error);
     }
   };
 
-  // Send a message via Socket
+  // Send a message
   const sendMessage = (content) => {
-    if (!content.trim() || !selectedRoom) return;
+    if (!content.trim() || !selectedRoom) {
+      console.log('⚠️ Cannot send message:', { content, selectedRoom });
+      return;
+    }
 
     const messageData = {
       content,
@@ -83,16 +93,24 @@ export const ChatProvider = ({ children }) => {
       },
     };
 
+    console.log('📤 Sending message:', messageData);
     socket.emit('send_message', messageData);
   };
 
   // Create a new room
   const createRoom = async (name) => {
     try {
-      await api.post('/rooms', { name, type: 'public' });
-      fetchRooms(); // Refresh list
+      console.log('🏗️ Creating room:', name);
+      const res = await api.post('/rooms', { name, type: 'public' });
+      console.log('✅ Room created:', res.data);
+      
+      // Add the new room to the list immediately
+      setRooms((prev) => [...prev, res.data]);
+      
+      return res.data;
     } catch (error) {
-      console.error('Error creating room:', error);
+      console.error('❌ Error creating room:', error);
+      throw error;
     }
   };
 
