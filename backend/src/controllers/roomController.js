@@ -36,12 +36,17 @@ const createRoom = async (req, res) => {
 // @access  Private
 const getRooms = async (req, res) => {
   try {
-    // Find rooms where the user is a member
-    const rooms = await ChatRoom.find({ members: req.user._id })
+    // Find all public rooms OR rooms where the user is a member
+    const rooms = await ChatRoom.find({
+      $or: [
+        { type: 'public' },
+        { members: req.user._id }
+      ]
+    })
       .populate('createdBy', 'username avatar')
       .populate('members', 'username avatar status')
       .populate('lastMessage')
-      .sort({ updatedAt: -1 }); // Sort by most recently active
+      .sort({ updatedAt: -1 });
 
     res.json(rooms);
   } catch (error) {

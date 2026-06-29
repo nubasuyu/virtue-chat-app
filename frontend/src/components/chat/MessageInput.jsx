@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Send } from 'lucide-react';
 import Button from '../ui/Button';
 
-const MessageInput = ({ onSend, placeholder = 'Type a message...' }) => {
+const MessageInput = ({ onSend, placeholder = 'Type a message...', disabled = false }) => {
   const [input, setInput] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (input.trim()) {
+    if (input.trim() && !disabled) {
+      console.log('📤 Sending message:', input);
       onSend(input);
       setInput('');
     }
@@ -21,13 +22,14 @@ const MessageInput = ({ onSend, placeholder = 'Type a message...' }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 px-4 py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+          disabled={disabled}
+          className="flex-1 px-4 py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800 disabled:opacity-50"
         />
         <Button
           type="submit"
           variant="primary"
           size="icon"
-          disabled={!input.trim()}
+          disabled={!input.trim() || disabled}
           className="rounded-full"
         >
           <Send size={20} />
