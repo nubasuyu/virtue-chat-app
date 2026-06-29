@@ -26,16 +26,25 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  // Allow all Vercel preview URLs and production URL
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        'https://virtue-chat-app-a6fa.vercel.app',
-        'https://virtue-chat-app-a6fa-hjlqcx1ln-nubasuyu1.vercel.app',
-        /\.vercel\.app$/  // This regex allows ANY Vercel preview URL
-      ]
-    : ['http://localhost:3000', 'http://localhost:5173'],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://virtue-chat-app-a6fa.vercel.app',
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.match(/\.vercel\.app$/)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
-}));app.use(express.json());
+}));
+
+app.use(express.json());
 
 // Create HTTP Server
 const server = http.createServer(app);

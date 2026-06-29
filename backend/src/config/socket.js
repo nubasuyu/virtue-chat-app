@@ -3,20 +3,36 @@ const Message = require('../models/Message');
 const ChatRoom = require('../models/ChatRoom');
 
 const initializeSocket = (server) => {
-  // Initialize Socket.IO with CORS settings
   const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? [
+    cors: {
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Define allowed origins
+        const allowedOrigins = [
+          'http://localhost:3000',
+          'http://localhost:5173',
           'https://virtue-chat-app-a6fa.vercel.app',
-          'https://virtue-chat-app-a6fa-hjlqcx1ln-nubasuyu1.vercel.app',
-          /\.vercel\.app$/
-        ]
-      : ['http://localhost:3000', 'http://localhost:5173'],
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
+        ];
+        
+        // Check if origin matches allowed list or is a Vercel preview URL
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.match(/\.vercel\.app$/)) {
+          callback(null, true);
+        } else {
+          console.log('Blocked by CORS:', origin);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      methods: ['GET', 'POST'],
+      credentials: true
+    },
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    transports: ['websocket', 'polling']
+  });
+
+  // ... rest of the code stays the same
 
   io.on('connection', (socket) => {
     console.log(`⚡ User connected: ${socket.id}`);
