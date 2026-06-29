@@ -3,55 +3,40 @@ const http = require('http');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
-// Import configurations
 const connectDB = require('./config/db');
 const initializeSocket = require('./config/socket');
 
-// Import routes
 const authRoutes = require('./routes/authRoutes');
 const roomRoutes = require('./routes/roomRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 
-// Import error middleware
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
-// Load environment variables
 dotenv.config();
-
-// Connect to Database
 connectDB();
 
-// Initialize Express App
 const app = express();
 
-// Middleware
 app.use(cors({
-  origin: true, // Allow all origins
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
   credentials: true
 }));
 app.use(express.json());
 
-// Create HTTP Server
 const server = http.createServer(app);
-
-// Initialize Socket.IO
 const io = initializeSocket(server);
 
-// Basic Test Route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to The Virtue Chat App API 🚀' });
 });
 
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Error Handling
 app.use(notFound);
 app.use(errorHandler);
 
-// Start Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 The Virtue Chat App server is running on port ${PORT}`);

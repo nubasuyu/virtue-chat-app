@@ -1,22 +1,16 @@
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import RoomItem from './RoomItem';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
 
 const RoomList = ({ rooms, selectedRoom, onSelectRoom, onCreateRoom }) => {
   const [showCreateInput, setShowCreateInput] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (newRoomName.trim()) {
-      try {
-        await onCreateRoom(newRoomName);
-        setNewRoomName('');
-        setShowCreateInput(false);
-      } catch (error) {
-        console.error('Error creating room:', error);
-      }
+      onCreateRoom(newRoomName);
+      setNewRoomName('');
+      setShowCreateInput(false);
     }
   };
 
@@ -31,43 +25,40 @@ const RoomList = ({ rooms, selectedRoom, onSelectRoom, onCreateRoom }) => {
       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-xl font-bold text-gray-800">Rooms</h2>
         <button
-          onClick={() => setShowCreateInput(true)}
+          onClick={() => setShowCreateInput(!showCreateInput)}
           className="p-2 hover:bg-gray-100 rounded-full text-purple-600 transition-colors"
-          title="Create Room"
+          title={showCreateInput ? "Close" : "Create Room"}
         >
-          <Plus size={20} />
+          {showCreateInput ? <X size={20} /> : <Plus size={20} />}
         </button>
       </div>
 
-      {/* Create Room Input */}
+      {/* Inline Create Room Form */}
       {showCreateInput && (
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <div className="space-y-3">
-            <Input
-              label="Room Name"
-              placeholder="e.g., General Discussion"
-              value={newRoomName}
-              onChange={(e) => setNewRoomName(e.target.value)}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleCancel}
-              >
-                <X size={16} className="mr-1" />
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleCreate}
-                disabled={!newRoomName.trim()}
-              >
-                Create Room
-              </Button>
-            </div>
+        <div className="p-4 border-b border-gray-200 bg-gray-50 space-y-3">
+          <input
+            type="text"
+            placeholder="e.g., General Discussion"
+            value={newRoomName}
+            onChange={(e) => setNewRoomName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            autoFocus
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={handleCancel}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={!newRoomName.trim()}
+              className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
+            >
+              Create
+            </button>
           </div>
         </div>
       )}

@@ -5,17 +5,9 @@ const ChatRoom = require('../models/ChatRoom');
 const initializeSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: true, // Allow all origins for now
+      origin: ['http://localhost:3000', 'http://localhost:5173'],
       methods: ['GET', 'POST'],
       credentials: true
-    },
-    // Critical for Render
-    pingTimeout: 60000,
-    pingInterval: 25000,
-    transports: ['websocket', 'polling'],
-    allowUpgrades: true,
-    perMessageDeflate: {
-      threshold: 1024
     }
   });
 
@@ -33,8 +25,6 @@ const initializeSocket = (server) => {
 
     socket.on('send_message', async (data) => {
       try {
-        console.log('📩 Received message:', data);
-        
         const newMessage = await Message.create({
           content: data.content,
           sender: data.sender._id,
@@ -48,9 +38,8 @@ const initializeSocket = (server) => {
         await ChatRoom.findByIdAndUpdate(data.roomId, { lastMessage: newMessage._id });
 
         io.to(data.roomId).emit('receive_message', populatedMessage);
-        console.log('✅ Message sent successfully');
       } catch (error) {
-        console.error('❌ Error sending message:', error);
+        console.error('Error sending message:', error);
       }
     });
 
