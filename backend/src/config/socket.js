@@ -3,13 +3,21 @@ const Message = require('../models/Message');
 const ChatRoom = require('../models/ChatRoom');
 
 const initializeSocket = (server) => {
-  const io = new Server(server, {
+ /*  const io = new Server(server, {
     cors: {
       origin: ['http://localhost:3000', 'http://localhost:5173'],
       methods: ['GET', 'POST'],
       credentials: true
     }
-  });
+  }); */
+
+  const io = new Server(server, {
+  cors: {
+    origin: true, // Allows Socket connections from any origin
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 
   io.on('connection', (socket) => {
     console.log(`⚡ User connected: ${socket.id}`);
